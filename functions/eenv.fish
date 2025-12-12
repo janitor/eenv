@@ -260,7 +260,7 @@ function __eenv_describe -a name
 
     set -l has_vars 0
     printf 'Variables in "%s":\n' "$name"
-    
+
     while read -l line
         set line (string trim $line)
         if test -z "$line"

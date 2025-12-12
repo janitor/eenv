@@ -33,4 +33,3 @@ complete -c eenv -n 'not __fish_seen_subcommand_from create new activate enable 
 complete -c eenv -n '__fish_seen_subcommand_from activate enable' -x -a '(__eenv_list_envs)' -d 'Environment name'
 complete -c eenv -n '__fish_seen_subcommand_from edit' -x -a '(__eenv_list_envs)' -d 'Environment name'
 complete -c eenv -n '__fish_seen_subcommand_from describe desc' -x -a '(__eenv_list_envs)' -d 'Environment name'
-
