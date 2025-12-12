@@ -27,9 +27,8 @@ function __eenv_vars_from_file -a file
         return 1
     end
 
-    set -l vars
     while read -l line
-        set line (string trim $line)
+        set line (string trim -- "$line")
         if test -z "$line"
             continue
         end
@@ -37,14 +36,12 @@ function __eenv_vars_from_file -a file
             continue
         end
 
-        set -l key (string replace -r '=.*$' '' -- $line)
-        set key (string trim -c ' \t' -- $key)
+        set -l key (string replace -r '=.*$' '' -- "$line")
+        set key (string trim -- "$key")
         if test -n "$key"
-            set vars $vars $key
+            printf '%s\n' "$key"
         end
     end < "$file"
-
-    echo $vars
 end
 
 function __eenv_unload_env -a name
@@ -55,7 +52,7 @@ function __eenv_unload_env -a name
 
     for var in (__eenv_vars_from_file "$file")
         # Remove exported globals to fully drop previously set env vars.
-        set -e -gx $var
+        set -e -g $var
     end
 end
 
@@ -68,24 +65,25 @@ function __eenv_load_env -a name
 
     set -l had_error 0
     while read -l line
-        set line (string trim $line)
+        set line (string trim -- "$line")
         if test -z "$line"
             continue
         end
-        if string match -qr '^#' -- $line
+        if string match -qr '^#' -- "$line"
             continue
         end
-        if not string match -q '*=*' -- $line
+        if not string match -q '*=*' -- "$line"
             printf 'eenv: skip invalid line in %s: %s\n' "$file" "$line" >&2
             set had_error 1
             continue
         end
 
-        set -l parts (string split -m1 '=' -- $line)
-        set -l key (string trim -c ' \t' -- $parts[1])
+        set -l parts (string split -m1 '=' -- "$line")
+        set -l key (string trim -- "$parts[1]")
         set -l value ""
         if test (count $parts) -ge 2
-            set value (string trim -c ' \t' -- $parts[2])
+            set -l raw_value "$parts[2]"
+            set value (string trim -- "$raw_value")
         end
         set -l is_quoted 0
         set -l vlen (string length -- $value)
@@ -103,8 +101,8 @@ function __eenv_load_env -a name
 
         if test $is_quoted -eq 0
             # Strip inline comment for unquoted values only.
-            set value (string replace -r '\s+#.*$' '' -- $value)
-            set value (string trim -c ' \t' -- $value)
+            set value (string replace -r '\s+#.*$' '' -- "$value")
+            set value (string trim -- "$value")
         end
 
         if test -n "$key"
@@ -262,7 +260,7 @@ function __eenv_describe -a name
     printf 'Variables in "%s":\n' "$name"
 
     while read -l line
-        set line (string trim $line)
+        set line (string trim -- "$line")
         if test -z "$line"
             continue
         end
@@ -273,15 +271,17 @@ function __eenv_describe -a name
             continue
         end
 
-        set -l parts (string split -m1 '=' -- $line)
-        set -l key (string trim -c ' \t' -- $parts[1])
+        set -l parts (string split -m1 '=' -- "$line")
+        set -l key_part "$parts[1]"
+        set -l key (string trim -- "$key_part")
         if test -z "$key"
             continue
         end
 
         set -l value ""
         if test (count $parts) -ge 2
-            set value (string trim -c ' \t' -- $parts[2])
+            set -l value_part "$parts[2]"
+            set value (string trim -- "$value_part")
         end
 
         set -l is_quoted 0
@@ -299,8 +299,8 @@ function __eenv_describe -a name
         end
 
         if test $is_quoted -eq 0
-            set value (string replace -r '\s+#.*$' '' -- $value)
-            set value (string trim -c ' \t' -- $value)
+            set value (string replace -r '\s+#.*$' '' -- "$value")
+            set value (string trim -- "$value")
         end
 
         set -l key_lower (string lower -- "$key")
@@ -331,10 +331,26 @@ function __eenv_describe -a name
     end
 end
 
+function __eenv_deactivate
+    set -l active (__eenv_current_active)
+    if test -z "$active"
+        echo 'eenv: no active environment to deactivate.' >&2
+        return 1
+    end
+
+    __eenv_unload_env "$active"
+    set -l active_file (__eenv_active_file)
+    if test -f "$active_file"
+        command rm -- "$active_file"
+    end
+    printf 'Deactivated "%s"\n' "$active"
+end
+
 function __eenv_usage
     echo 'Usage:'
     echo '  eenv create <name>    Create a new env file'
     echo '  eenv activate <name>  Activate env, removing vars from previously active env'
+    echo '  eenv deactivate      Deactivate current environment'
     echo '  eenv edit [name]      Edit active env or the one passed'
     echo '  eenv list             List envs and show the active one'
     echo '  eenv describe [name]  Show variables in active env or the one passed'
@@ -359,6 +375,12 @@ function eenv
             __eenv_create $argv[2]
         case 'activate' 'enable'
             __eenv_activate $argv[2]
+        case 'deactivate' 'disable'
+            if test (count $argv) -gt 1
+                echo 'Usage: eenv deactivate' >&2
+                return 1
+            end
+            __eenv_deactivate
         case 'edit'
             if test (count $argv) -gt 2
                 echo 'Usage: eenv edit [name]' >&2
