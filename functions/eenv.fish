@@ -348,12 +348,12 @@ end
 
 function __eenv_usage
     echo 'Usage:'
-    echo '  eenv create <name>    Create a new env file'
-    echo '  eenv activate <name>  Activate env, removing vars from previously active env'
-    echo '  eenv deactivate      Deactivate current environment'
+    echo '  eenv create <name>    Create a new env file (alias: new)'
+    echo '  eenv activate <name>  Activate env, removing vars from previously active env (alias: enable)'
+    echo '  eenv deactivate      Deactivate current environment (alias: disable)'
     echo '  eenv edit [name]      Edit active env or the one passed'
-    echo '  eenv list             List envs and show the active one'
-    echo '  eenv describe [name]  Show variables in active env or the one passed'
+    echo '  eenv list             List envs and show the active one (alias: ls)'
+    echo '  eenv describe [name]  Show variables in active env or the one passed (alias: desc)'
 end
 
 function __eenv_restore_active
